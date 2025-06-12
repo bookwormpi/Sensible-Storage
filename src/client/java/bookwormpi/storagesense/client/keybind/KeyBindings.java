@@ -33,6 +33,7 @@ public class KeyBindings {
     public static void initialize() {
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             while (CONFIGURE_MEMORY.wasPressed()) {
+                StorageSense.LOGGER.info("Configure memory key pressed!"); // Debug log
                 handleConfigureMemoryKey(client);
             }
         });
@@ -41,32 +42,31 @@ public class KeyBindings {
     }
     
     private static void handleConfigureMemoryKey(MinecraftClient client) {
+        StorageSense.LOGGER.info("Configure memory key pressed!"); // Debug log
+        
         if (client.currentScreen instanceof HandledScreen<?> handledScreen) {
+            StorageSense.LOGGER.info("Currently in a handled screen"); // Debug log
             ContainerTracker.ContainerInfo containerInfo = ContainerTracker.getContainerInfo(handledScreen.getScreenHandler());
             
             if (containerInfo != null) {
-                // Get the slot under the mouse cursor
-                // Adapted from Sophisticated Backpacks' slot detection pattern
-                Slot hoveredSlot = getSlotUnderMouse(handledScreen);
+                StorageSense.LOGGER.info("Found container info for position: {}", containerInfo.pos()); // Debug log
                 
-                if (hoveredSlot != null && isValidContainerSlot(hoveredSlot)) {
-                    int slotIndex = hoveredSlot.id;
-                    
-                    MemoryConfigScreen memoryScreen = new MemoryConfigScreen(
-                        containerInfo.world(),
-                        containerInfo.pos(),
-                        slotIndex,
-                        client.currentScreen
-                    );
-                    
-                    client.setScreen(memoryScreen);
-                } else {
-                    // Show a message that no valid slot is selected
-                    if (client.player != null) {
-                        client.player.sendMessage(Text.translatable("storagesense.message.no_slot_selected"), false);
-                    }
-                }
+                // For now, let's just test with slot 0 to see if the GUI opens
+                MemoryConfigScreen memoryScreen = new MemoryConfigScreen(
+                    containerInfo.world(),
+                    containerInfo.pos(),
+                    0, // Test with slot 0
+                    client.currentScreen
+                );
+                
+                client.setScreen(memoryScreen);
+                StorageSense.LOGGER.info("Opened memory config screen for slot 0"); // Debug log
+            } else {
+                StorageSense.LOGGER.info("No container info found for this screen handler"); // Debug log
             }
+        } else {
+            StorageSense.LOGGER.info("Not in a handled screen, current screen: {}", 
+                client.currentScreen != null ? client.currentScreen.getClass().getSimpleName() : "null"); // Debug log
         }
     }
     

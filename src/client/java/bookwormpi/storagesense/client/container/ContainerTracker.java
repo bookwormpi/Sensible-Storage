@@ -30,6 +30,21 @@ public class ContainerTracker {
     }
     
     /**
+     * Get just the BlockPos of a container by its screen handler
+     */
+    public static BlockPos getContainerPosition(ScreenHandler handler) {
+        ContainerInfo info = CONTAINER_POSITIONS.get(handler);
+        return info != null ? info.pos() : null;
+    }
+    
+    /**
+     * Check if a container is being tracked
+     */
+    public static boolean isTrackedContainer(ScreenHandler handler) {
+        return CONTAINER_POSITIONS.containsKey(handler);
+    }
+    
+    /**
      * Remove a container when it's closed
      */
     public static void unregisterContainer(ScreenHandler handler) {

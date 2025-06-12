@@ -1,48 +1,94 @@
 package bookwormpi.storagesense.mixin;
 
+import bookwormpi.storagesense.StorageSense;
 import bookwormpi.storagesense.client.container.ContainerTracker;
+import bookwormpi.storagesense.client.gui.MemoryConfigScreen;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.screen.ingame.GenericContainerScreen;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
-import net.minecraft.screen.GenericContainerScreenHandler;
 import net.minecraft.screen.ScreenHandler;
 import net.minecraft.util.math.BlockPos;
+import org.lwjgl.glfw.GLFW;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /**
  * Mixin to track when container screens are opened
  * This helps us associate screen handlers with block positions
  */
-@Mixin(GenericContainerScreen.class)
-public class GenericContainerScreenMixin {
+@Mixin(HandledScreen.class)
+public abstract class HandledScreenMixin {
     
-    @Inject(method = "init", at = @At("TAIL"))
+    @Inject(method = "init()V", at = @At("TAIL"))
     private void storagesense$onContainerScreenInit(CallbackInfo ci) {
         MinecraftClient client = MinecraftClient.getInstance();
         if (client.world != null && client.player != null) {
             HandledScreen<?> screen = (HandledScreen<?>) (Object) this;
             ScreenHandler handler = screen.getScreenHandler();
             
-            if (handler instanceof GenericContainerScreenHandler) {
+            StorageSense.LOGGER.info("HandledScreen init: {}, slots: {}", 
+                screen.getClass().getSimpleName(), handler.slots.size()); // Debug log
+            
+            // Only track containers that have an inventory
+            if (handler != null && hasInventory(handler)) {
                 // Try to find the container position
-                // This is a simplified approach - in a full implementation,
-                // we'd need more sophisticated position detection
                 BlockPos containerPos = findNearestContainer(client);
                 if (containerPos != null) {
                     ContainerTracker.registerContainer(handler, client.world, containerPos);
+                    StorageSense.LOGGER.info("Registered container at position: {}", containerPos); // Debug log
+                } else {
+                    StorageSense.LOGGER.info("Could not find container position"); // Debug log
                 }
+            } else {
+                StorageSense.LOGGER.info("Screen handler does not have inventory or has too few slots"); // Debug log
             }
         }
     }
     
-    @Inject(method = "close", at = @At("HEAD"))
+    @Inject(method = "removed()V", at = @At("HEAD"))
     private void storagesense$onContainerScreenClose(CallbackInfo ci) {
         HandledScreen<?> screen = (HandledScreen<?>) (Object) this;
         ContainerTracker.unregisterContainer(screen.getScreenHandler());
+    }
+    
+    @Inject(method = "keyPressed(III)Z", at = @At("HEAD"), cancellable = true)
+    private void storagesense$onKeyPressed(int keyCode, int scanCode, int modifiers, CallbackInfoReturnable<Boolean> cir) {
+        // Check if M key was pressed (keyCode 77 = M)
+        if (keyCode == GLFW.GLFW_KEY_M) {
+            StorageSense.LOGGER.info("M key pressed in container screen!");
+            
+            HandledScreen<?> screen = (HandledScreen<?>) (Object) this;
+            ContainerTracker.ContainerInfo containerInfo = ContainerTracker.getContainerInfo(screen.getScreenHandler());
+            
+            if (containerInfo != null) {
+                StorageSense.LOGGER.info("Opening memory config for container at: {}", containerInfo.pos());
+                
+                // Open memory config for slot 0 as a test
+                MemoryConfigScreen memoryScreen = new MemoryConfigScreen(
+                    containerInfo.world(),
+                    containerInfo.pos(),
+                    0,
+                    MinecraftClient.getInstance().currentScreen
+                );
+                
+                MinecraftClient.getInstance().setScreen(memoryScreen);
+                
+                // Mark the key as handled to prevent further processing
+                cir.setReturnValue(true);
+            }
+        }
+    }
+    
+    /**
+     * Check if a screen handler has an inventory that we should track
+     */
+    private boolean hasInventory(ScreenHandler handler) {
+        // Most container screen handlers we care about will have slots
+        // We can be more specific if needed
+        return handler.slots.size() > 36; // Player inventory is 36 slots, so containers have more
     }
     
     /**
