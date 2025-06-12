@@ -1,9 +1,11 @@
 {
 	"required": true,
-	"package": "bookwormpi.storagesense.mixin.client",
+	"package": "bookwormpi.storagesense.mixin",
 	"compatibilityLevel": "JAVA_21",
 	"client": [
-		"ExampleClientMixin"
+		"ExampleClientMixin",
+		"SlotMixin",
+		"GenericContainerScreenMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

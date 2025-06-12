@@ -1,0 +1,22 @@
+{
+  "key.storagesense.configure_memory": "Configure Memory Slot",
+  "category.storagesense.keybinds": "Storage Sense",
+  
+  "storagesense.gui.memory_config.title": "Slot Memory Configuration",
+  "storagesense.gui.memory_config.slot": "Configuring Slot %d",
+  "storagesense.gui.memory_config.allowed_items": "Allowed Items:",
+  "storagesense.gui.memory_config.available_items": "Available Items:",
+  "storagesense.gui.memory_config.search": "Search...",
+  "storagesense.gui.memory_config.search_placeholder": "Type to search items",
+  "storagesense.gui.memory_config.clear_all": "Clear All",
+  "storagesense.gui.memory_config.save": "Save",
+  "storagesense.gui.memory_config.click_to_remove": "Click to remove",
+  "storagesense.gui.memory_config.click_to_add": "Click to add",
+  "storagesense.gui.memory_config.already_allowed": "Already allowed",
+  "storagesense.gui.memory_config.instruction1": "Click items below to allow them in this slot",
+  "storagesense.gui.memory_config.instruction2": "Click allowed items to remove them",
+  
+  "storagesense.message.no_slot_selected": "No valid container slot selected",
+  "storagesense.message.memory_enabled": "Memory enabled for slot %d",
+  "storagesense.message.memory_disabled": "Memory disabled for slot %d"
+}
