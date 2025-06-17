@@ -1,6 +1,5 @@
 package bookwormpi.storagesense.client.keybind;
 
-import bookwormpi.storagesense.StorageSense;
 import bookwormpi.storagesense.client.container.ContainerTracker;
 import bookwormpi.storagesense.client.gui.MemoryConfigScreen;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -33,23 +32,18 @@ public class KeyBindings {
     public static void initialize() {
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             while (CONFIGURE_MEMORY.wasPressed()) {
-                StorageSense.LOGGER.info("Configure memory key pressed!"); // Debug log
                 handleConfigureMemoryKey(client);
             }
         });
         
-        StorageSense.LOGGER.info("Storage Sense keybinds initialized");
     }
     
     private static void handleConfigureMemoryKey(MinecraftClient client) {
-        StorageSense.LOGGER.info("Configure memory key pressed!"); // Debug log
         
         if (client.currentScreen instanceof HandledScreen<?> handledScreen) {
-            StorageSense.LOGGER.info("Currently in a handled screen"); // Debug log
             ContainerTracker.ContainerInfo containerInfo = ContainerTracker.getContainerInfo(handledScreen.getScreenHandler());
             
             if (containerInfo != null) {
-                StorageSense.LOGGER.info("Found container info for position: {}", containerInfo.pos()); // Debug log
                 
                 // For now, let's just test with slot 0 to see if the GUI opens
                 MemoryConfigScreen memoryScreen = new MemoryConfigScreen(
@@ -60,13 +54,7 @@ public class KeyBindings {
                 );
                 
                 client.setScreen(memoryScreen);
-                StorageSense.LOGGER.info("Opened memory config screen for slot 0"); // Debug log
-            } else {
-                StorageSense.LOGGER.info("No container info found for this screen handler"); // Debug log
             }
-        } else {
-            StorageSense.LOGGER.info("Not in a handled screen, current screen: {}", 
-                client.currentScreen != null ? client.currentScreen.getClass().getSimpleName() : "null"); // Debug log
         }
     }
     
@@ -85,7 +73,6 @@ public class KeyBindings {
             
             return findSlotAt(screen, mouseX, mouseY);
         } catch (Exception e) {
-            StorageSense.LOGGER.warn("Failed to get slot under mouse: {}", e.getMessage());
             return null;
         }
     }

@@ -1,6 +1,5 @@
 package bookwormpi.storagesense.client.memory;
 
-import bookwormpi.storagesense.StorageSense;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.math.BlockPos;
@@ -31,7 +30,6 @@ public class EnhancedSBStyleMemoryManager {
         }
         
         isInitialized = true;
-        StorageSense.LOGGER.info("Enhanced SB-Style memory manager initialized (persistent: {})", usePersistentStorage);
     }
     
     /**
@@ -42,7 +40,6 @@ public class EnhancedSBStyleMemoryManager {
         if (enabled && !isInitialized) {
             PersistentMemoryManager.init();
         }
-        StorageSense.LOGGER.info("Persistent storage {}", enabled ? "enabled" : "disabled");
     }
     
     /**
@@ -116,7 +113,6 @@ public class EnhancedSBStyleMemoryManager {
             PersistentMemoryManager.save();
         }
         
-        StorageSense.LOGGER.debug("Captured memory for container: {} ({} slots)", containerId, containerSlots);
     }
     
     /**
@@ -143,15 +139,15 @@ public class EnhancedSBStyleMemoryManager {
             }
         }
         
-        StorageSense.LOGGER.debug("Cleared memory for container: {}", containerId);
     }
     
     /**
      * Check if an item matches the memory template (SB-style matching)
      */
     public static boolean matchesTemplate(String containerId, int slotIndex, ItemStack stack) {
+        // We need the total container size, not slotIndex + 1
         ItemStack[] templates = usePersistentStorage ? 
-            PersistentMemoryManager.getMemoryTemplates(containerId, slotIndex + 1) :
+            PersistentMemoryManager.getMemoryTemplates(containerId, Math.max(54, slotIndex + 1)) :
             sessionMemory.get(containerId);
             
         if (templates == null || slotIndex >= templates.length || templates[slotIndex].isEmpty()) {
@@ -160,6 +156,23 @@ public class EnhancedSBStyleMemoryManager {
         
         // SB-style matching
         return ItemStack.areItemsAndComponentsEqual(templates[slotIndex], stack);
+    }
+    
+    /**
+     * Check if an item matches a template (static utility method)
+     * Used for slot filtering
+     */
+    public static boolean itemMatchesTemplate(ItemStack template, ItemStack item) {
+        if (template.isEmpty()) {
+            return true; // No template means allow anything
+        }
+        
+        if (item.isEmpty()) {
+            return false; // Can't place empty item if template exists
+        }
+        
+        // SB-style matching - same item type and components, ignore count
+        return ItemStack.areItemsAndComponentsEqual(template, item);
     }
      /**
      * Get memory template for a specific slot
@@ -172,17 +185,10 @@ public class EnhancedSBStyleMemoryManager {
             sessionMemory.get(containerId);
             
         if (templates == null || slotIndex < 0 || slotIndex >= templates.length) {
-            StorageSense.LOGGER.info("getTemplate({}, {}) -> EMPTY (templates={}, length={})", 
-                containerId, slotIndex, 
-                templates == null ? "null" : "exists", 
-                templates == null ? 0 : templates.length);
             return ItemStack.EMPTY;
         }
 
         ItemStack result = templates[slotIndex];
-        StorageSense.LOGGER.info("getTemplate({}, {}) -> {}", 
-            containerId, slotIndex, 
-            result.isEmpty() ? "EMPTY" : result.getItem().toString());
         return result;
     }
     
@@ -195,17 +201,10 @@ public class EnhancedSBStyleMemoryManager {
             sessionMemory.get(containerId);
             
         if (templates == null || slotIndex < 0 || slotIndex >= templates.length) {
-            StorageSense.LOGGER.info("getTemplate({}, {}, {}) -> EMPTY (templates={}, length={})", 
-                containerId, slotIndex, containerSlots,
-                templates == null ? "null" : "exists", 
-                templates == null ? 0 : templates.length);
             return ItemStack.EMPTY;
         }
 
         ItemStack result = templates[slotIndex];
-        StorageSense.LOGGER.info("getTemplate({}, {}, {}) -> {}", 
-            containerId, slotIndex, containerSlots,
-            result.isEmpty() ? "EMPTY" : result.getItem().toString());
         return result;
     }
     
@@ -228,8 +227,6 @@ public class EnhancedSBStyleMemoryManager {
                 PersistentMemoryManager.save();
             }
             
-            StorageSense.LOGGER.debug("Set template for container {} slot {}: {}", containerId, slotIndex, 
-                stack.isEmpty() ? "EMPTY" : stack.getItem().toString());
         }
     }
     
@@ -250,8 +247,6 @@ public class EnhancedSBStyleMemoryManager {
                 PersistentMemoryManager.save();
             }
             
-            StorageSense.LOGGER.debug("Set template for container {} slot {} (size {}): {}", containerId, slotIndex, containerSlots,
-                stack.isEmpty() ? "EMPTY" : stack.getItem().toString());
         }
     }
     
@@ -293,12 +288,10 @@ public class EnhancedSBStyleMemoryManager {
             // Reset memorize mode though
             PersistentMemoryManager.ContainerMemory memory = PersistentMemoryManager.getOrCreateMemory(containerId, 0);
             memory.memorizeMode = false;
-            StorageSense.LOGGER.debug("Reset memorize mode for persistent container: {}", containerId);
         } else {
             // In session mode, remove completely
             sessionMemory.remove(containerId);
             sessionMemorizeMode.remove(containerId);
-            StorageSense.LOGGER.debug("Removed session container: {}", containerId);
         }
     }
     
@@ -312,7 +305,6 @@ public class EnhancedSBStyleMemoryManager {
             sessionMemory.remove(containerId);
             sessionMemorizeMode.remove(containerId);
         }
-        StorageSense.LOGGER.info("Force removed container: {}", containerId);
     }
     
     /**
@@ -321,7 +313,6 @@ public class EnhancedSBStyleMemoryManager {
     public static void saveAll() {
         if (usePersistentStorage) {
             PersistentMemoryManager.save();
-            StorageSense.LOGGER.debug("Saved all persistent memory data");
         }
     }
     
@@ -374,7 +365,5 @@ public class EnhancedSBStyleMemoryManager {
             sessionMemorizeMode.put(toContainerId, memorizeMode);
         }
         
-        StorageSense.LOGGER.info("Migrated memory from {} to {} ({} templates)", 
-            fromContainerId, toContainerId, fromTemplates.length);
     }
 }

@@ -1,6 +1,5 @@
 package bookwormpi.storagesense.client.memory;
 
-import bookwormpi.storagesense.StorageSense;
 import com.google.gson.*;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.item.ItemStack;
@@ -58,9 +57,7 @@ public class PersistentMemoryManager {
         try {
             Files.createDirectories(STORAGE_DIR);
             load();
-            StorageSense.LOGGER.info("Persistent memory system initialized");
         } catch (Exception e) {
-            StorageSense.LOGGER.error("Failed to initialize persistent memory system", e);
         }
     }
     
@@ -72,7 +69,6 @@ public class PersistentMemoryManager {
         
         try {
             if (!Files.exists(MEMORY_FILE)) {
-                StorageSense.LOGGER.info("No existing memory file found, starting fresh");
                 isLoaded = true;
                 return;
             }
@@ -90,16 +86,13 @@ public class PersistentMemoryManager {
                 }
             }
             
-            StorageSense.LOGGER.info("Loaded memory templates for {} containers", loadedMemories.size());
             isLoaded = true;
             
         } catch (Exception e) {
-            StorageSense.LOGGER.error("Failed to load memory templates, backing up corrupted file", e);
             try {
                 Files.move(MEMORY_FILE, MEMORY_FILE.resolveSibling("memory_templates.json.corrupt"), 
                           StandardCopyOption.REPLACE_EXISTING);
             } catch (IOException backupError) {
-                StorageSense.LOGGER.error("Failed to backup corrupted memory file", backupError);
             }
             isLoaded = true;
         }
@@ -125,10 +118,8 @@ public class PersistentMemoryManager {
             Files.createDirectories(STORAGE_DIR);
             Files.writeString(MEMORY_FILE, GSON.toJson(root));
             
-            StorageSense.LOGGER.debug("Saved memory templates for {} containers", loadedMemories.size());
             
         } catch (Exception e) {
-            StorageSense.LOGGER.error("Failed to save memory templates", e);
         }
     }
     
@@ -239,7 +230,6 @@ public class PersistentMemoryManager {
             return memory;
             
         } catch (Exception e) {
-            StorageSense.LOGGER.error("Failed to deserialize container memory", e);
             return null;
         }
     }
@@ -278,7 +268,6 @@ public class PersistentMemoryManager {
             String itemIdStr = obj.get("item").getAsString();
             Identifier itemId = Identifier.tryParse(itemIdStr);
             if (itemId == null) {
-                StorageSense.LOGGER.warn("Invalid item ID: {}", itemIdStr);
                 return ItemStack.EMPTY;
             }
             
@@ -288,7 +277,6 @@ public class PersistentMemoryManager {
             return new ItemStack(item, count);
             
         } catch (Exception e) {
-            StorageSense.LOGGER.error("Failed to deserialize ItemStack", e);
             return ItemStack.EMPTY;
         }
     }

@@ -1,6 +1,5 @@
 package bookwormpi.storagesense.mixin;
 
-import bookwormpi.storagesense.StorageSense;
 import bookwormpi.storagesense.client.container.ContainerTracker;
 import bookwormpi.storagesense.client.gui.MemoryConfigScreen;
 import bookwormpi.storagesense.client.memory.EnhancedSBStyleMemoryManager;
@@ -37,15 +36,13 @@ public abstract class HandledScreenMixin {
     private boolean storagesense$isContainerScreen = false;
     private BlockPos storagesense$containerPos = null;
     private long storagesense$lastClickTime = 0;
+    private long storagesense$lastButtonClickTime = 0;
     
     @Inject(method = "init()V", at = @At("TAIL"))
     private void storagesense$onContainerScreenInit(CallbackInfo ci) {
         MinecraftClient client = MinecraftClient.getInstance();
         if (client.world != null && client.player != null) {
             HandledScreen<?> screen = (HandledScreen<?>) (Object) this;
-            
-            StorageSense.LOGGER.info("HandledScreen init: {}, slots: {}", 
-                screen.getClass().getSimpleName(), handler.slots.size());
             
             // Check if this is a container screen we want to add memory slots to
             storagesense$isContainerScreen = isContainerScreen(screen);
@@ -64,9 +61,6 @@ public abstract class HandledScreenMixin {
                 // Initialize memory templates
                 int containerSlots = Math.max(0, handler.slots.size() - 36);
                 EnhancedSBStyleMemoryManager.getMemoryTemplates(storagesense$containerId, containerSlots);
-                
-                StorageSense.LOGGER.info("Initialized enhanced SB-style memory for container: {} (pos: {})", 
-                    storagesense$containerId, storagesense$containerPos);
             }
             
             // Original container tracking
@@ -74,7 +68,6 @@ public abstract class HandledScreenMixin {
                 BlockPos containerPos = storagesense$containerPos != null ? storagesense$containerPos : findNearestContainer(client);
                 if (containerPos != null) {
                     ContainerTracker.registerContainer(handler, client.world, containerPos);
-                    StorageSense.LOGGER.info("Registered container at position: {}", containerPos);
                 }
             }
         }
@@ -88,7 +81,6 @@ public abstract class HandledScreenMixin {
         // Enhanced SB-style cleanup: remove or persist memory when screen closes
         if (storagesense$containerId != null) {
             EnhancedSBStyleMemoryManager.removeContainer(storagesense$containerId);
-            StorageSense.LOGGER.info("Closed container: {}", storagesense$containerId);
         }
     }
     
@@ -96,13 +88,10 @@ public abstract class HandledScreenMixin {
     private void storagesense$onKeyPressed(int keyCode, int scanCode, int modifiers, CallbackInfoReturnable<Boolean> cir) {
         // Check if M key was pressed (keyCode 77 = M)
         if (keyCode == GLFW.GLFW_KEY_M) {
-            StorageSense.LOGGER.info("M key pressed in container screen!");
-            
             HandledScreen<?> screen = (HandledScreen<?>) (Object) this;
             ContainerTracker.ContainerInfo containerInfo = ContainerTracker.getContainerInfo(screen.getScreenHandler());
             
             if (containerInfo != null) {
-                StorageSense.LOGGER.info("Opening memory config for container at: {}", containerInfo.pos());
                 
                 // Open memory config for slot 0 as a test
                 MemoryConfigScreen memoryScreen = new MemoryConfigScreen(
@@ -231,6 +220,12 @@ public abstract class HandledScreenMixin {
     private void storagesense$handleMemoryButtonClicks(double mouseX, double mouseY, int button, CallbackInfoReturnable<Boolean> cir) {
         if (!storagesense$isContainerScreen || storagesense$containerId == null) return;
         
+        // Debounce button clicks to prevent rapid toggling when holding down mouse
+        long currentTime = System.currentTimeMillis();
+        if (currentTime - storagesense$lastButtonClickTime < 200) {
+            return; // Ignore rapid clicks
+        }
+        
         int memoryButtonX = x + backgroundWidth + 4;
         int memoryButtonY = y + 20;
         int clearButtonX = x + backgroundWidth + 4;
@@ -241,14 +236,11 @@ public abstract class HandledScreenMixin {
         // Check Memory button click
         if (mouseX >= memoryButtonX && mouseX <= memoryButtonX + 60 && 
             mouseY >= memoryButtonY && mouseY <= memoryButtonY + 20) {
+            storagesense$lastButtonClickTime = currentTime;
+            
             // SB-style memory mode toggle
             boolean newMode = EnhancedSBStyleMemoryManager.toggleMemorizeMode(storagesense$containerId);
             
-            if (newMode) {
-                StorageSense.LOGGER.info("Entered memorize mode for container: {}", storagesense$containerId);
-            } else {
-                StorageSense.LOGGER.info("Exited memorize mode for container: {}", storagesense$containerId);
-            }
             cir.setReturnValue(true);
             return;
         }
@@ -256,9 +248,10 @@ public abstract class HandledScreenMixin {
         // Check Clear button click
         if (mouseX >= clearButtonX && mouseX <= clearButtonX + 60 && 
             mouseY >= clearButtonY && mouseY <= clearButtonY + 20) {
+            storagesense$lastButtonClickTime = currentTime;
+            
             // SB-style memory clear
             EnhancedSBStyleMemoryManager.clearMemory(storagesense$containerId);
-            StorageSense.LOGGER.info("Cleared memory for container: {}", storagesense$containerId);
             cir.setReturnValue(true);
             return;
         }
@@ -266,11 +259,11 @@ public abstract class HandledScreenMixin {
         // Check Persistent mode toggle button click
         if (mouseX >= persistButtonX && mouseX <= persistButtonX + 60 && 
             mouseY >= persistButtonY && mouseY <= persistButtonY + 20) {
+            storagesense$lastButtonClickTime = currentTime;
+            
             // Toggle persistent mode
             boolean newPersistentMode = !EnhancedSBStyleMemoryManager.isPersistentMode();
             EnhancedSBStyleMemoryManager.setPersistentStorage(newPersistentMode);
-            
-            StorageSense.LOGGER.info("Toggled persistent memory mode to: {}", newPersistentMode ? "ON" : "OFF");
             
             // Recreate container ID with new mode
             MinecraftClient client = MinecraftClient.getInstance();
@@ -281,9 +274,6 @@ public abstract class HandledScreenMixin {
                 
                 // Migrate memory if container ID changed
                 if (!newContainerId.equals(storagesense$containerId)) {
-                    StorageSense.LOGGER.info("Container ID changed from {} to {} due to mode toggle", 
-                        storagesense$containerId, newContainerId);
-                    
                     // Migrate existing memory templates to new container ID
                     EnhancedSBStyleMemoryManager.migrateMemory(storagesense$containerId, newContainerId);
                     
@@ -300,7 +290,8 @@ public abstract class HandledScreenMixin {
     }
     
     /**
-     * Render ghost items in empty slots with memory templates (SB-style)
+     * Render ghost items in empty slots with memory templates
+     * Based on SophisticatedCore's rendering approach
      */
     @Inject(method = "drawSlot(Lnet/minecraft/client/gui/DrawContext;Lnet/minecraft/screen/slot/Slot;)V", at = @At("TAIL"))
     private void storagesense$renderGhostItems(DrawContext context, Slot slot, CallbackInfo ci) {
@@ -313,35 +304,15 @@ public abstract class HandledScreenMixin {
         
         boolean memorizeMode = EnhancedSBStyleMemoryManager.isMemorizeMode(storagesense$containerId);
         
-        // SB-style ghost item rendering
+        // Render ghost items like SophisticatedCore
         if (slot.getStack().isEmpty()) {
             ItemStack template = EnhancedSBStyleMemoryManager.getTemplate(storagesense$containerId, slotIndex, containerSlots);
             if (!template.isEmpty()) {
-                // Debug logging to see what's being rendered
-                StorageSense.LOGGER.info("Rendering ghost item for slot {}: {}", slotIndex, template.getItem().toString());
-                
-                // Render ghost item with REI-style transparency
-                context.getMatrices().push();
-                
-                // Reduce the Z level slightly to render behind normal items
-                context.getMatrices().translate(0, 0, -50);
-                
-                // Render the item normally first
+                // Render the template item
                 context.drawItem(template, slot.x, slot.y);
                 
-                // Move back to normal Z level for overlay
-                context.getMatrices().translate(0, 0, 50);
-                
-                // Apply a white semi-transparent overlay to create ghost effect
-                // Different intensity for memorize mode vs normal mode
-                float overlayAlpha = memorizeMode ? 0.4f : 0.6f;
-                int overlayColor = (int)(overlayAlpha * 255) << 24 | 0xFFFFFF; // White overlay with alpha
-                context.fill(slot.x, slot.y, slot.x + 16, slot.y + 16, overlayColor);
-                
-                context.getMatrices().pop();
-            } else {
-                // Debug: log when no template is found for empty slots
-                StorageSense.LOGGER.info("No template found for empty slot {}", slotIndex);
+                // Add a semi-transparent overlay to create the ghost effect
+                storagesense$drawStackOverlay(context, slot.x, slot.y);
             }
         }
         
@@ -356,6 +327,16 @@ public abstract class HandledScreenMixin {
     }
     
     /**
+     * Draw overlay on ghost items to make them appear translucent
+     * Based on SophisticatedCore's approach
+     */
+    private void storagesense$drawStackOverlay(DrawContext context, int x, int y) {
+        // Create a semi-transparent white overlay to give the ghost effect
+        // This matches how SophisticatedCore renders ghost items
+        context.fill(x, y, x + 16, y + 16, 0x80FFFFFF); // 50% transparent white
+    }
+    
+    /**
      * Check if this is a container screen we want to add memory to
      */
     private boolean isContainerScreen(HandledScreen<?> screen) {
@@ -367,76 +348,189 @@ public abstract class HandledScreenMixin {
     }
     
     /**
-     * Handle slot clicks to set memory in memorize mode
+     * Handle slot clicks for both memorize mode and filtering
      * Based on SophisticatedCore's MemorySettingsTab approach
      */
     @Inject(method = "onMouseClick(Lnet/minecraft/screen/slot/Slot;IILnet/minecraft/screen/slot/SlotActionType;)V", at = @At("HEAD"), cancellable = true)
-    private void storagesense$handleMemorizeSlotClick(net.minecraft.screen.slot.Slot slot, int slotId, int button, net.minecraft.screen.slot.SlotActionType actionType, CallbackInfo ci) {
+    private void storagesense$handleSlotClick(net.minecraft.screen.slot.Slot slot, int slotId, int button, net.minecraft.screen.slot.SlotActionType actionType, CallbackInfo ci) {
         if (!storagesense$isContainerScreen || storagesense$containerId == null) return;
-        if (!EnhancedSBStyleMemoryManager.isMemorizeMode(storagesense$containerId)) return;
         
         // Only handle container slots, not player inventory
         int slotIndex = handler.slots.indexOf(slot);
         int containerSlots = Math.max(0, handler.slots.size() - 36);
         if (slotIndex < 0 || slotIndex >= containerSlots) return;
         
-        // In memorize mode, clicking on a slot sets its memory template
+        boolean isMemorizeMode = EnhancedSBStyleMemoryManager.isMemorizeMode(storagesense$containerId);
+        
+        if (isMemorizeMode) {
+            // Handle memorize mode - setting memory templates
+            storagesense$handleMemorizeMode(slot, slotIndex, button, containerSlots, ci);
+        } else {
+            // Handle filtering - prevent placing items that don't match templates
+            storagesense$handleSlotFiltering(slot, slotIndex, button, actionType, containerSlots, ci);
+        }
+    }
+    
+    /**
+     * Handle memorize mode slot clicks
+     */
+    private void storagesense$handleMemorizeMode(net.minecraft.screen.slot.Slot slot, int slotIndex, int button, int containerSlots, CallbackInfo ci) {
         MinecraftClient client = MinecraftClient.getInstance();
-        if (client.player != null) {
-            // Debounce rapid clicks (prevent setting same template multiple times quickly)
-            long currentTime = System.currentTimeMillis();
-            if (currentTime - storagesense$lastClickTime < 100) {
-                ci.cancel();
-                return;
-            }
-            storagesense$lastClickTime = currentTime;
+        if (client.player == null) return;
+        
+        // Debounce rapid clicks (prevent setting same template multiple times quickly)
+        long currentTime = System.currentTimeMillis();
+        if (currentTime - storagesense$lastClickTime < 100) {
+            ci.cancel();
+            return;
+        }
+        storagesense$lastClickTime = currentTime;
 
-            // Use SophisticatedCore's approach: try different sources for the item
-            ItemStack templateItem = ItemStack.EMPTY;
+        // Use SophisticatedCore's approach: try different sources for the item
+        ItemStack templateItem = ItemStack.EMPTY;
+        
+        // First, try what's in the slot itself (if any)
+        if (!slot.getStack().isEmpty()) {
+            templateItem = slot.getStack().copy();
+            templateItem.setCount(1); // Memory template should have count 1
+        } else {
+            // If slot is empty, try to get cursor stack
+            // Use multiple methods for better compatibility
+            ItemStack playerCursor = client.player.playerScreenHandler.getCursorStack();
+            ItemStack handlerCursor = handler.getCursorStack();
             
-            // First, try what's in the slot itself (if any)
-            if (!slot.getStack().isEmpty()) {
-                templateItem = slot.getStack().copy();
-                templateItem.setCount(1); // Memory template should have count 1
+            // Prefer the handler cursor as it's more specific to this container
+            if (!handlerCursor.isEmpty()) {
+                templateItem = handlerCursor.copy();
+                templateItem.setCount(1);
+            } else if (!playerCursor.isEmpty()) {
+                templateItem = playerCursor.copy();
+                templateItem.setCount(1);
             } else {
-                // If slot is empty, try to get cursor stack
-                // Use multiple methods for better compatibility
-                ItemStack playerCursor = client.player.playerScreenHandler.getCursorStack();
-                ItemStack handlerCursor = handler.getCursorStack();
+                // If no cursor item, try main hand item
+                ItemStack mainHandItem = client.player.getMainHandStack();
+                if (!mainHandItem.isEmpty()) {
+                    templateItem = mainHandItem.copy();
+                    templateItem.setCount(1);
+                }
+            }
+        }
+        
+        // Set the memory template
+        if (button == 0) { // Left click sets template
+            EnhancedSBStyleMemoryManager.setTemplate(storagesense$containerId, slotIndex, templateItem, containerSlots);
+        } else if (button == 1) { // Right click clears template
+            EnhancedSBStyleMemoryManager.setTemplate(storagesense$containerId, slotIndex, ItemStack.EMPTY, containerSlots);
+        }
+
+        // Cancel the normal slot action to prevent item movement
+        ci.cancel();
+    }
+    
+    /**
+     * Handle slot filtering - prevent placing items that don't match memory templates
+     */
+    private void storagesense$handleSlotFiltering(net.minecraft.screen.slot.Slot slot, int slotIndex, int button, net.minecraft.screen.slot.SlotActionType actionType, int containerSlots, CallbackInfo ci) {
+        // Get the memory template for this slot
+        ItemStack template = EnhancedSBStyleMemoryManager.getTemplate(storagesense$containerId, slotIndex, containerSlots);
+        if (template.isEmpty()) return; // No template set, allow any item
+        
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client.player == null) return;
+        
+        // Get the item being placed
+        ItemStack itemToPlace = ItemStack.EMPTY;
+        
+        // Different actions place items from different sources
+        switch (actionType) {
+            case PICKUP:
+                // Placing cursor item into slot
+                itemToPlace = handler.getCursorStack();
+                if (itemToPlace.isEmpty()) {
+                    itemToPlace = client.player.playerScreenHandler.getCursorStack();
+                }
+                break;
                 
-                // Prefer the handler cursor as it's more specific to this container
-                if (!handlerCursor.isEmpty()) {
-                    templateItem = handlerCursor.copy();
-                    templateItem.setCount(1);
-                } else if (!playerCursor.isEmpty()) {
-                    templateItem = playerCursor.copy();
-                    templateItem.setCount(1);
-                } else {
-                    // If no cursor item, try main hand item
-                    ItemStack mainHandItem = client.player.getMainHandStack();
-                    if (!mainHandItem.isEmpty()) {
-                        templateItem = mainHandItem.copy();
-                        templateItem.setCount(1);
+            case QUICK_MOVE:
+                // Shift-clicking - need to handle this properly
+                storagesense$handleShiftClickFiltering(slot, slotIndex, containerSlots, ci);
+                return;
+                
+            case SWAP:
+                // Hotbar swap (1-9 keys)
+                if (button >= 0 && button < 9) {
+                    itemToPlace = client.player.getInventory().getStack(button);
+                }
+                break;
+                
+            case CLONE:
+                // Creative mode middle-click - allow this
+                return;
+                
+            case THROW:
+                // Dropping items - not placing, so allow
+                return;
+                
+            default:
+                // For other actions, try to get cursor stack
+                itemToPlace = handler.getCursorStack();
+                if (itemToPlace.isEmpty()) {
+                    itemToPlace = client.player.playerScreenHandler.getCursorStack();
+                }
+                break;
+        }
+        
+        // If we're trying to place an item and it doesn't match the template, block it
+        if (!itemToPlace.isEmpty() && !EnhancedSBStyleMemoryManager.itemMatchesTemplate(template, itemToPlace)) {
+            ci.cancel(); // Block the slot interaction
+            return;
+        }
+        
+        // If we're taking an item from a slot with a template, that's always allowed
+        // (template filtering only applies to putting items IN)
+    }
+    
+    /**
+     * Handle shift-click filtering specifically
+     * This is more complex because we need to determine which slots the item will go to
+     */
+    private void storagesense$handleShiftClickFiltering(Slot slot, int slotIndex, int containerSlots, CallbackInfo ci) {
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client.player == null) return;
+        
+        ItemStack stackToMove = slot.getStack();
+        if (stackToMove.isEmpty()) return;
+        
+        // Determine if we're moving FROM container TO inventory or FROM inventory TO container
+        boolean isContainerSlot = slotIndex >= 0 && slotIndex < containerSlots;
+        
+        if (isContainerSlot) {
+            // Moving FROM container TO inventory - this is always allowed (taking items out)
+            return;
+        } else {
+            // Moving FROM inventory TO container - need to check where it will go
+            // We need to simulate where the item would go and check if those slots allow it
+            
+            // Find potential destination slots in the container
+            for (int destSlotIndex = 0; destSlotIndex < containerSlots; destSlotIndex++) {
+                Slot destSlot = handler.getSlot(destSlotIndex);
+                ItemStack destStack = destSlot.getStack();
+                
+                // Check if this slot could accept some of the items
+                if (destStack.isEmpty() || ItemStack.areItemsAndComponentsEqual(destStack, stackToMove)) {
+                    // This slot is a potential destination
+                    ItemStack template = EnhancedSBStyleMemoryManager.getTemplate(storagesense$containerId, destSlotIndex, containerSlots);
+                    
+                    if (!template.isEmpty() && !EnhancedSBStyleMemoryManager.itemMatchesTemplate(template, stackToMove)) {
+                        // Template exists and item doesn't match - block the shift-click
+                        ci.cancel();
+                        return;
                     }
                 }
             }
             
-            // Debug logging to help identify issues
-            StorageSense.LOGGER.info("Memorize Mode - Setting template for slot {} to: {}", 
-                slotIndex, templateItem.isEmpty() ? "empty" : templateItem.getItem().toString());
-
-            // Set the memory template
-            if (button == 0) { // Left click sets template
-                EnhancedSBStyleMemoryManager.setTemplate(storagesense$containerId, slotIndex, templateItem, containerSlots);
-                StorageSense.LOGGER.info("Set memory template for slot {} to: {}", 
-                    slotIndex, templateItem.isEmpty() ? "empty" : templateItem.getItem().toString());
-            } else if (button == 1) { // Right click clears template
-                EnhancedSBStyleMemoryManager.setTemplate(storagesense$containerId, slotIndex, ItemStack.EMPTY, containerSlots);
-                StorageSense.LOGGER.info("Cleared memory template for slot {}", slotIndex);
-            }
-
-            // Cancel the normal slot action to prevent item movement
-            ci.cancel();
+            // If we get here, either no templates conflict or no valid destination slots found
+            // Allow the operation to proceed
         }
     }
 }

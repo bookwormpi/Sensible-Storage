@@ -20,6 +20,9 @@
 		],
 		"client": [
 			"bookwormpi.storagesense.StorageSenseClient"
+		],
+		"rei_client": [
+			"bookwormpi.storagesense.client.compat.REICompat"
 		]
 	},
 	"mixins": [
@@ -36,6 +39,6 @@
 		"fabric-api": "*"
 	},
 	"suggests": {
-		"another-mod": "*"
+		"roughlyenoughitems": "*"
 	}
 }

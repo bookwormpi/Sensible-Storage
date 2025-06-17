@@ -1,6 +1,5 @@
 package bookwormpi.storagesense.client.gui.widget;
 
-import bookwormpi.storagesense.StorageSense;
 import bookwormpi.storagesense.client.gui.MemoryConfigScreen;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
@@ -32,7 +31,6 @@ public class MinecraftCompatibleMemoryButton extends ButtonWidget {
     
     @Override
     public void onPress() {
-        StorageSense.LOGGER.info("Memory config button pressed for container at: {}", containerPos);
         
         // Open memory config for slot 0 as default
         MemoryConfigScreen memoryScreen = new MemoryConfigScreen(
