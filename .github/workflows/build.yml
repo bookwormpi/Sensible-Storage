@@ -1,7 +1,9 @@
-name: Build and Release Fabric Mod
+name: Build and Release Sensible Storage
 
 on:
   push:
+    branches: [ main, master ]
+  pull_request:
     branches: [ main, master ]
 
 jobs:
@@ -16,6 +18,9 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: 21
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
 
       - name: Grant execute permission for gradlew
         run: chmod +x ./gradlew
@@ -49,11 +54,23 @@ jobs:
           VERSION: ${{ steps.get_version.outputs.mod_version }}
 
       - name: Create release and upload jar
-        if: steps.check_release.outputs.exists == 'false'
+        if: steps.check_release.outputs.exists == 'false' && github.event_name == 'push'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.get_version.outputs.mod_version }}
-          name: v${{ steps.get_version.outputs.mod_version }}
-          files: build/libs/SensibleStorage-*.jar
+          name: Sensible Storage v${{ steps.get_version.outputs.mod_version }}
+          files: build/libs/sensiblestorage-*.jar
           draft: false
           prerelease: false
+          body: |
+            ## Sensible Storage v${{ steps.get_version.outputs.mod_version }}
+            
+            Adds intelligent memory slots to containers, similar to SophisticatedBackpacks!
+            
+            ### Features:
+            - SB-style memory button with brain icon
+            - Container memory slot filtering
+            - Persistent storage across sessions
+            - Compatible with Minecraft 1.21.5
+            
+            **Download the JAR file below and place it in your `mods` folder.**
