@@ -1,0 +1,26 @@
+{
+  "key.sensiblestorage.configure_memory": "Configure Memory Slot",
+  "category.sensiblestorage.keybinds": "Sensible Storage",
+  
+  "sensiblestorage.gui.memory_config.title": "Slot Memory Configuration",
+  "sensiblestorage.gui.memory_config.slot": "Configuring Slot %d",
+  "sensiblestorage.gui.memory_config.allowed_items": "Allowed Items:",
+  "sensiblestorage.gui.memory_config.available_items": "Available Items:",
+  "sensiblestorage.gui.memory_config.search": "Search...",
+  "sensiblestorage.gui.memory_config.search_placeholder": "Type to search items",
+  "sensiblestorage.gui.memory_config.clear_all": "Clear All",
+  "sensiblestorage.gui.memory_config.save": "Save",
+  "sensiblestorage.gui.memory_config.click_to_remove": "Click to remove",
+  "sensiblestorage.gui.memory_config.click_to_add": "Click to add",
+  "sensiblestorage.gui.memory_config.already_allowed": "Already allowed",
+  "sensiblestorage.gui.memory_config.instruction1": "Click items below to allow them in this slot",
+  "sensiblestorage.gui.memory_config.instruction2": "Click allowed items to remove them",
+  
+  "sensiblestorage.gui.memory_mode_toggle": "Toggle Memory Mode",
+  "sensiblestorage.gui.memory_mode_toggle.narration": "Memory mode toggle button",
+  "sensiblestorage.gui.memory_button.tooltip": "Configure memory slot",
+  
+  "sensiblestorage.message.no_slot_selected": "No valid container slot selected",
+  "sensiblestorage.message.memory_enabled": "Memory enabled for slot %d",
+  "sensiblestorage.message.memory_disabled": "Memory disabled for slot %d"
+}

@@ -1,34 +1,34 @@
 {
 	"schemaVersion": 1,
-	"id": "storagesense",
+	"id": "sensiblestorage",
 	"version": "${version}",
-	"name": "Storage Sense",
-	"description": "This is an example description! Tell everyone what your mod is about!",
+	"name": "Sensible Storage",
+	"description": "Adds intelligent memory slots to containers, similar to SophisticatedBackpacks!",
 	"authors": [
-		"Me!"
+		"bookwormpi"
 	],
 	"contact": {
 		"homepage": "https://fabricmc.net/",
 		"sources": "https://github.com/FabricMC/fabric-example-mod"
 	},
 	"license": "CC0-1.0",
-	"icon": "assets/storagesense/icon.png",
+	"icon": "assets/sensiblestorage/icon.png",
 	"environment": "client",
 	"entrypoints": {
 		"main": [
-			"bookwormpi.storagesense.StorageSense"
+			"bookwormpi.sensiblestorage.SensibleStorage"
 		],
 		"client": [
-			"bookwormpi.storagesense.StorageSenseClient"
+			"bookwormpi.sensiblestorage.SensibleStorageClient"
 		],
 		"rei_client": [
-			"bookwormpi.storagesense.client.compat.REICompat"
+			"bookwormpi.sensiblestorage.client.compat.REICompat"
 		]
 	},
 	"mixins": [
-		"storagesense.mixins.json",
+		"sensiblestorage.mixins.json",
 		{
-			"config": "storagesense.client.mixins.json",
+			"config": "sensiblestorage.client.mixins.json",
 			"environment": "client"
 		}
 	],
